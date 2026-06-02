@@ -154,6 +154,7 @@ namespace fakenvapi {
             }
 
             INSERT_AND_RETURN_WHEN_EQUALS(NvAPI_Initialize)
+            INSERT_AND_RETURN_WHEN_EQUALS(NvAPI_InitializeEx)
             INSERT_AND_RETURN_WHEN_EQUALS(NvAPI_GetInterfaceVersionString)
             INSERT_AND_RETURN_WHEN_EQUALS(NvAPI_EnumNvidiaDisplayHandle)
             INSERT_AND_RETURN_WHEN_EQUALS(NvAPI_GetLogicalGPUFromPhysicalGPU)
@@ -220,6 +221,9 @@ namespace fakenvapi {
             INSERT_AND_RETURN_WHEN_EQUALS(NvAPI_DRS_GetSetting)
             INSERT_AND_RETURN_WHEN_EQUALS(NvAPI_DRS_SetSetting)
             INSERT_AND_RETURN_WHEN_EQUALS(NvAPI_DRS_DestroySession)
+            INSERT_AND_RETURN_WHEN_EQUALS(NvAPI_DRS_GetProfileInfo)
+            INSERT_AND_RETURN_WHEN_EQUALS(NvAPI_DRS_FindApplicationByName)
+            INSERT_AND_RETURN_WHEN_EQUALS(NvAPI_DRS_LoadGoldSettings)
             INSERT_AND_RETURN_WHEN_EQUALS(NvAPI_Unknown_1)
             INSERT_AND_RETURN_WHEN_EQUALS(NvAPI_SK_1)
             INSERT_AND_RETURN_WHEN_EQUALS(NvAPI_SK_2)

@@ -1,6 +1,8 @@
 #include "ll_antilag_vk.h"
 #include "vulkan_hooks.h"
 
+static uint64_t last_marker_frame[13] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
 bool AntiLagVk::init(IUnknown* pDevice) {
     return VulkanHooks::o_vkAntiLagUpdateAMD != nullptr;
 }
@@ -28,7 +30,7 @@ void AntiLagVk::set_sleep_mode(SleepMode* sleep_mode) {
     // use_markers_to_optimize
 
     low_latency_enabled = sleep_mode->low_latency_enabled;
-    max_fps = sleep_mode->minimum_interval_us > 0 ? (uint32_t) std::round(1000000.0f / sleep_mode->minimum_interval_us) : 0;
+    max_fps = sleep_mode->minimum_interval_us > 0 ? (uint32_t)std::round(1000000.0f / sleep_mode->minimum_interval_us) : 0;
 }
 
 void AntiLagVk::sleep() {
@@ -54,7 +56,7 @@ void AntiLagVk::set_marker(IUnknown* pDevice, MarkerParams* marker_params) {
 
     if (using_oob_present && call_count - last_oob_present > allowed_gap)
         using_oob_present = false;
-    
+
     if (marker_params->marker_type == MarkerType::SIMULATION_START)
     {
         // Before processing user input
@@ -69,11 +71,14 @@ void AntiLagVk::set_marker(IUnknown* pDevice, MarkerParams* marker_params) {
         antiLagDataInput.pPresentationInfo = &inputInfo;
         antiLagDataInput.maxFPS = max_fps;
 
-        if (VulkanHooks::o_vkAntiLagUpdateAMD)
+        auto last_frame = last_marker_frame[(size_t)marker_params->marker_type];
+
+        if (VulkanHooks::o_vkAntiLagUpdateAMD && (last_frame == 0 || marker_params->frame_id == 0 || last_frame < marker_params->frame_id))
         {
             spdlog::trace("AntiLag Input: {}, status: {}", marker_params->frame_id, is_enabled());
 
             VulkanHooks::o_vkAntiLagUpdateAMD((VkDevice)pDevice, &antiLagDataInput);
+            last_marker_frame[(size_t)marker_params->marker_type] = marker_params->frame_id;
         }
     }
 

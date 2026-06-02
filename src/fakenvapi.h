@@ -49,6 +49,7 @@ namespace fakenvapi {
     static VkSemaphore low_latency_semaphore = VK_NULL_HANDLE;
 
     NvAPI_Status __cdecl NvAPI_Initialize();
+    NvAPI_Status __cdecl NvAPI_InitializeEx();
     NvAPI_Status __cdecl NvAPI_GetInterfaceVersionString(NvAPI_ShortString desc);
     NvAPI_Status __cdecl NvAPI_EnumPhysicalGPUs(NvPhysicalGpuHandle handles[NVAPI_MAX_PHYSICAL_GPUS], NvU32* count);
     NvAPI_Status __cdecl NvAPI_EnumLogicalGPUs(NvLogicalGpuHandle handles[NVAPI_MAX_LOGICAL_GPUS], NvU32* count);
@@ -115,6 +116,9 @@ namespace fakenvapi {
     NvAPI_Status __cdecl NvAPI_DRS_GetSetting(NvDRSSessionHandle hSession, NvDRSProfileHandle hProfile, NvU32 settingId, NVDRS_SETTING* pSetting);
     NvAPI_Status __cdecl NvAPI_DRS_SetSetting(NvDRSSessionHandle hSession, NvDRSProfileHandle hProfile, NVDRS_SETTING *pSetting);
     NvAPI_Status __cdecl NvAPI_DRS_DestroySession(NvDRSSessionHandle session);
+    NvAPI_Status __cdecl NvAPI_DRS_GetProfileInfo(NvDRSSessionHandle hSession, NvDRSProfileHandle hProfile, NVDRS_PROFILE* pProfileInfo);
+    NvAPI_Status __cdecl NvAPI_DRS_FindApplicationByName(NvDRSSessionHandle hSession, NvAPI_UnicodeString appName, NvDRSProfileHandle* phProfile, NVDRS_APPLICATION* pApplication);
+    NvAPI_Status __cdecl NvAPI_DRS_LoadGoldSettings(NvDRSSessionHandle hSession);
     NvAPI_Status __cdecl NvAPI_Unknown_1(IUnknown* unknown, uint32_t* pMiscUnk);
     NvAPI_Status __cdecl NvAPI_SK_1(IUnknown* unknown);
     NvAPI_Status __cdecl NvAPI_SK_2(IUnknown* unknown);

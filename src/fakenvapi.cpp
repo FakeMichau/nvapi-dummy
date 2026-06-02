@@ -1,8 +1,19 @@
 #include "fakenvapi.h"
 #include "fakexell.h"
+#include <filesystem>
 
 LowLatency* LowLatencyCtx::lowlatency_ctx = nullptr;
 static auto init_mutex = std::mutex{};
+
+static std::filesystem::path GetProcessFilePath()
+{
+    wchar_t fileName[MAX_PATH];
+    GetModuleFileNameW(NULL, fileName, MAX_PATH);
+
+    std::filesystem::path filePath(fileName);
+
+    return filePath;
+}
 
 namespace fakenvapi {
     bool Init() {
@@ -42,6 +53,19 @@ namespace fakenvapi {
     }
 
     NvAPI_Status __cdecl NvAPI_Initialize() {
+        std::scoped_lock lock(init_mutex);
+
+        ref_count++;
+        
+        if (!Init()) {
+            --ref_count;
+            return ERROR();
+        }
+
+        return OK();
+    }
+
+    NvAPI_Status __cdecl NvAPI_InitializeEx() {
         std::scoped_lock lock(init_mutex);
 
         ref_count++;
@@ -665,11 +689,17 @@ namespace fakenvapi {
     }
 
     NvAPI_Status __cdecl NvAPI_DRS_CreateSession(NvDRSSessionHandle* session) {
+        if (!session)
+            return ERROR_VALUE(NVAPI_INVALID_ARGUMENT);
+
         *session = drs_session;
         return OK();
     }
 
     NvAPI_Status __cdecl NvAPI_DRS_LoadSettings(NvDRSSessionHandle session) {
+        if (session != drs_session)
+            return ERROR_VALUE(NVAPI_INVALID_ARGUMENT);
+
         return OK();
     }
 
@@ -678,13 +708,47 @@ namespace fakenvapi {
     }
 
     NvAPI_Status __cdecl NvAPI_DRS_GetBaseProfile(NvDRSSessionHandle session, NvDRSProfileHandle* profile) {
+        if (session != drs_session || !profile)
+            return ERROR_VALUE(NVAPI_INVALID_ARGUMENT);
+
         *profile = drs_profile;
         return OK();
     }
 
     NvAPI_Status __cdecl NvAPI_DRS_GetSetting(NvDRSSessionHandle hSession, NvDRSProfileHandle hProfile, NvU32 settingId, NVDRS_SETTING* pSetting) {
-        spdlog::debug("Missing get setting: {}", settingId);
-        return OK();
+        if (hSession != drs_session || hProfile != drs_profile || !pSetting) {
+            // only one session and one argument for now
+            return ERROR_VALUE(NVAPI_INVALID_ARGUMENT);
+        }
+
+        if (pSetting->version != NVDRS_SETTING_VER1) {
+            return ERROR_VALUE(NVAPI_INCOMPATIBLE_STRUCT_VERSION);
+        }
+
+        if (settingId == 0x10A89C8E)
+        {
+            spdlog::debug("Return magical -160");
+            pSetting->u32CurrentValue = -160;
+            pSetting->settingId = settingId;
+            pSetting->settingLocation = NVDRS_CURRENT_PROFILE_LOCATION;
+            pSetting->isCurrentPredefined = 0;
+            pSetting->isPredefinedValid = 1;
+            return OK();
+        }
+        else if (settingId == 0x104D6667)
+        {
+            spdlog::debug("Return MFG Limit 1?");
+            pSetting->u32CurrentValue = 1;
+            pSetting->settingId = settingId;
+            pSetting->settingLocation = NVDRS_CURRENT_PROFILE_LOCATION;
+            pSetting->isCurrentPredefined = 0;
+            pSetting->isPredefinedValid = 1;            
+            return OK();
+        }
+
+        spdlog::trace("settingId: {}", settingId);
+
+        return ERROR_VALUE(NVAPI_SETTING_NOT_FOUND);
     }
 
     NvAPI_Status __cdecl NvAPI_DRS_SetSetting(NvDRSSessionHandle hSession, NvDRSProfileHandle hProfile, NVDRS_SETTING *pSetting) {
@@ -693,8 +757,68 @@ namespace fakenvapi {
     }
 
     NvAPI_Status __cdecl NvAPI_DRS_DestroySession(NvDRSSessionHandle session) {
+        if (session != drs_session)
+            return ERROR_VALUE(NVAPI_INVALID_ARGUMENT);
+
         return OK();
     }
+
+    NvAPI_Status __cdecl NvAPI_DRS_GetProfileInfo(NvDRSSessionHandle hSession, NvDRSProfileHandle hProfile, NVDRS_PROFILE* pProfileInfo)
+    {
+        if (hSession != drs_session || !pProfileInfo)
+            return ERROR_VALUE(NVAPI_INVALID_ARGUMENT);
+
+        wcsncpy_s(reinterpret_cast<wchar_t*>(pProfileInfo->profileName), 2048, L"Default", _TRUNCATE);
+        pProfileInfo->isPredefined = 1;
+        pProfileInfo->numOfApps = 0;
+        pProfileInfo->numOfSettings = 0;
+        pProfileInfo->gpuSupport.geforce = 1;
+
+        return OK();
+    }
+
+    NvAPI_Status __cdecl NvAPI_DRS_FindApplicationByName(NvDRSSessionHandle hSession, NvAPI_UnicodeString appName, NvDRSProfileHandle* phProfile, NVDRS_APPLICATION* pApplication)
+    {
+        if (!phProfile || !pApplication) {
+            return ERROR_VALUE(NVAPI_INVALID_POINTER);
+        }
+
+        *phProfile = drs_profile;
+
+        // V1 fields
+        pApplication->isPredefined = 1;
+        wcsncpy_s(reinterpret_cast<wchar_t*>(pApplication->appName), 2048, GetProcessFilePath().c_str(), _TRUNCATE);
+        wcsncpy_s(reinterpret_cast<wchar_t*>(pApplication->userFriendlyName), 2048, L"", _TRUNCATE);
+        wcsncpy_s(reinterpret_cast<wchar_t*>(pApplication->launcher), 2048, L"", _TRUNCATE);
+
+        // V2 onwards
+        if (pApplication->version != NVDRS_APPLICATION_VER_V1) {
+            wcsncpy_s(reinterpret_cast<wchar_t*>(pApplication->fileInFolder), 2048, L"", _TRUNCATE);
+        }
+
+        // V3 onwards
+        if (pApplication->version == NVDRS_APPLICATION_VER_V3 || pApplication->version == NVDRS_APPLICATION_VER_V4) {
+            pApplication->isMetro = 0;
+            pApplication->isCommandLine = 0;
+            pApplication->reserved = 0;
+        }
+
+        // V4
+        if (pApplication->version == NVDRS_APPLICATION_VER_V4) {
+            wcsncpy_s(reinterpret_cast<wchar_t*>(pApplication->commandLine), 2048, L"", _TRUNCATE);
+        }
+
+        return OK();
+    }
+
+    NvAPI_Status __cdecl NvAPI_DRS_LoadGoldSettings(NvDRSSessionHandle hSession)
+    {
+        if (hSession != drs_session) 
+            return ERROR_VALUE(NVAPI_INVALID_ARGUMENT);
+
+        return OK();
+    }
+
 
     NvAPI_Status __cdecl NvAPI_Unknown_1(IUnknown* unknown, uint32_t* pMiscUnk) {
         std::fill(pMiscUnk, pMiscUnk + 4, 0x1);

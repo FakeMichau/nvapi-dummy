@@ -31,6 +31,7 @@ struct NVAPI_INTERFACE_TABLE { const char * func; unsigned int id; };
 struct NVAPI_INTERFACE_TABLE nvapi_interface_table[] =
 {
     { "NvAPI_Initialize", 0x0150e828 },
+    { "NvAPI_InitializeEx", 0xad298d3f },
     { "NvAPI_Unload", 0xd22bdd7e },
     { "NvAPI_GetErrorMessage", 0x6c2d048c },
     { "NvAPI_GetInterfaceVersionString", 0x01053fa5 },
@@ -498,6 +499,7 @@ struct NVAPI_INTERFACE_TABLE nvapi_interface_table[] =
     { "NvAPI_Vulkan_NotifyOutOfBandVkQueue", 0x5d6d3840 },
     { "NvAPI_DRS_CreateSession", 0x0694d52e },
     { "NvAPI_DRS_DestroySession", 0xdad9cff8 },
+    { "NvAPI_DRS_LoadGoldSettings", 0xa782ea46 },
     { "NvAPI_DRS_LoadSettings", 0x375dbd6b },
     { "NvAPI_DRS_SaveSettings", 0xfcbc7e14 },
     { "NvAPI_DRS_LoadSettingsFromFile", 0xd3ede889 },

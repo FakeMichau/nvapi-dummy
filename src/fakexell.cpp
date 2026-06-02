@@ -44,6 +44,8 @@ namespace fakexell
         HOOK(xellD3D12CreateContext);
 
         DetourTransactionCommit();
+
+        spdlog::info("Hooked libxell");
     }
 
     HMODULE GetCallerModule(void* returnAddress)
@@ -106,8 +108,12 @@ namespace fakexell
         return o_xellSetLoggingCallback(hContext, loggingLevel, loggingCallback);
     }
     xell_result_t hkxellD3D12CreateContext(ID3D12Device* device, xell_context_handle_t* out_context) {
-        if (GetModuleHandle(nullptr) == GetCallerModule(_ReturnAddress())) return XELL_RESULT_SUCCESS;
-        // spdlog::info("xellD3D12CreateContext");
+        if (GetModuleHandle(nullptr) == GetCallerModule(_ReturnAddress()))
+        {
+            spdlog::info("xellD3D12CreateContext");
+            return XELL_RESULT_SUCCESS;
+        }
+
         return o_xellD3D12CreateContext(device, out_context);
     }
 }
